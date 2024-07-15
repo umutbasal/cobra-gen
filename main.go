@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -93,19 +94,17 @@ func main() {
 		Name: "cmd",
 	}
 	structureFolders(commands, 0, folders)
-	var paths []string
-	printFullPaths(folders, ".", &paths)
-	for _, p := range paths {
-		println(p)
-		// mkdir -p
-		// write file
+	var files []File
+	printFullPaths(folders, ".", &files)
+	for _, f := range files {
+		println(f.Path)
 
-		err := os.MkdirAll(path.Dir(p), 0755)
+		err := os.MkdirAll(path.Dir(f.Path), 0755)
 		if err != nil {
 			panic(err)
 		}
 
-		err = os.WriteFile(p, []byte("Hello, World!"), 0644)
+		err = os.WriteFile(f.Path, execTmpl(&f), 0644)
 		if err != nil {
 			panic(err)
 		}
@@ -119,8 +118,11 @@ type Folder struct {
 }
 
 type File struct {
-	Name string
-	Data []byte
+	Name    string
+	Path    string
+	PkgPath string
+	PkgName string
+	Cmd     *Command
 }
 
 func structureFolders(cmd Command, level int, result *Folder) {
@@ -130,7 +132,7 @@ func structureFolders(cmd Command, level int, result *Folder) {
 	if level == 0 {
 		file := &File{
 			Name: "cmd.go",
-			Data: MainTemplate(),
+			Cmd:  &cmd,
 		}
 		result.Files = append(result.Files, file)
 	}
@@ -143,24 +145,28 @@ func structureFolders(cmd Command, level int, result *Folder) {
 			structureFolders(*sub, level+1, folder)
 			file := &File{
 				Name: sub.Name + ".go",
-				Data: MainTemplate(),
+				Cmd:  sub,
 			}
 			folder.Files = append(folder.Files, file)
 		} else {
 			file := &File{
 				Name: sub.Name + ".go",
-				Data: MainTemplate(),
+				Cmd:  sub,
 			}
 			result.Files = append(result.Files, file)
 		}
 	}
 }
 
-func printFullPaths(folder *Folder, path string, paths *[]string) {
+func printFullPaths(folder *Folder, path string, files *[]File) {
 	for _, file := range folder.Files {
-		*paths = append(*paths, path+"/"+folder.Name+"/"+file.Name)
+		file.Path = path + "/" + folder.Name + "/" + file.Name
+		file.PkgPath = path + "/" + folder.Name
+		file.PkgPath = strings.TrimPrefix(file.PkgPath, "./")
+		file.PkgName = "github.com/umutbasal/cobra-gen"
+		*files = append(*files, *file)
 	}
 	for _, sub := range folder.SubFolders {
-		printFullPaths(sub, path+"/"+folder.Name, paths)
+		printFullPaths(sub, path+"/"+folder.Name, files)
 	}
 }
