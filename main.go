@@ -6,8 +6,29 @@ import (
 	"path"
 	"strings"
 
+	"golang.org/x/mod/modfile"
 	"gopkg.in/yaml.v2"
 )
+
+var modName string
+
+func init() {
+	f := "go.mod"
+	// read go.mod
+
+	goMod, err := os.ReadFile(f)
+	if err != nil {
+		panic(err)
+	}
+
+	// parse go.mod
+	modFile, err := modfile.Parse(f, goMod, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	modName = modFile.Module.Mod.Path
+}
 
 type Command struct {
 	Name     string
@@ -196,7 +217,7 @@ func printFullPaths(folder *Folder, path string, files *[]File) {
 		if file.Cmd.Parent != nil {
 			file.ParentPkg = pkgNaming(file.Cmd.Parent.Name)
 		}
-		file.RootPkgName = "github.com/umutbasal/cobra-gen"
+		file.RootPkgName = modName
 		file.PkgName = folder.Name
 		file.Cmd.FuncName = kebabToCamel(file.Cmd.Name)
 		file.Cmd.PkgName = pkgNaming(file.Cmd.Name)

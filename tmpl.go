@@ -47,7 +47,7 @@ func init() {
 var exampleTmpl = `package main
 
 import (
-	"github.com/umutbasal/cobra-gen/cmd"
+	"` + modName + `"
 )
 
 
