@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 
@@ -9,11 +10,14 @@ import (
 )
 
 type Command struct {
-	Name   string
-	Args   []string
-	Flags  map[string]string
-	Sub    []*Command
-	Parent *Command
+	Name     string
+	FuncName string
+	PkgName  string
+	PkgPath  string
+	Args     []string
+	Flags    map[string]string
+	Sub      []*Command
+	Parent   *Command
 }
 
 func parseYaml(yamlConfig map[string]interface{}) Command {
@@ -109,6 +113,24 @@ func main() {
 			panic(err)
 		}
 	}
+	//exec gofmt -w . in cmd
+
+	cmd := exec.Command("gofmt", "-w", ".")
+	cmd.Dir = "cmd"
+	err = cmd.Run()
+	if err != nil {
+		panic(err)
+	}
+
+	// create examples/main.go
+	err = os.MkdirAll("examples", 0755)
+	if err != nil {
+		panic(err)
+	}
+	err = os.WriteFile("examples/main.go", []byte(exampleTmpl), 0644)
+	if err != nil {
+		panic(err)
+	}
 }
 
 type Folder struct {
@@ -118,11 +140,14 @@ type Folder struct {
 }
 
 type File struct {
-	Name    string
-	Path    string
-	PkgPath string
-	PkgName string
-	Cmd     *Command
+	Name          string
+	Path          string
+	PkgPath       string
+	ParentPkg     string
+	ParentPkgPath string
+	PkgName       string
+	RootPkgName   string
+	Cmd           *Command
 }
 
 func structureFolders(cmd Command, level int, result *Folder) {
@@ -160,13 +185,37 @@ func structureFolders(cmd Command, level int, result *Folder) {
 
 func printFullPaths(folder *Folder, path string, files *[]File) {
 	for _, file := range folder.Files {
+		if folder.Name == "cmd" {
+			file.Cmd.FuncName = ""
+		}
+		folder.Name = pkgNaming(folder.Name)
 		file.Path = path + "/" + folder.Name + "/" + file.Name
 		file.PkgPath = path + "/" + folder.Name
 		file.PkgPath = strings.TrimPrefix(file.PkgPath, "./")
-		file.PkgName = "github.com/umutbasal/cobra-gen"
+		file.ParentPkgPath = strings.TrimPrefix(path, "./")
+		if file.Cmd.Parent != nil {
+			file.ParentPkg = pkgNaming(file.Cmd.Parent.Name)
+		}
+		file.RootPkgName = "github.com/umutbasal/cobra-gen"
+		file.PkgName = folder.Name
+		file.Cmd.FuncName = kebabToCamel(file.Cmd.Name)
+		file.Cmd.PkgName = pkgNaming(file.Cmd.Name)
+		file.Cmd.PkgPath = file.PkgPath
 		*files = append(*files, *file)
 	}
 	for _, sub := range folder.SubFolders {
 		printFullPaths(sub, path+"/"+folder.Name, files)
 	}
+}
+
+func kebabToCamel(s string) string {
+	var result string
+	for _, part := range strings.Split(s, "-") {
+		result += strings.Title(part)
+	}
+	return result
+}
+
+func pkgNaming(s string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(s, "_", ""), "-", ""))
 }
