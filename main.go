@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path"
 
 	"gopkg.in/yaml.v2"
 )
@@ -88,55 +89,78 @@ func main() {
 	}
 
 	commands := parseYaml(yamlConfig)
-	printCommands(commands, 0)
+	folders := &Folder{
+		Name: "cmd",
+	}
+	structureFolders(commands, 0, folders)
+	var paths []string
+	printFullPaths(folders, ".", &paths)
+	for _, p := range paths {
+		println(p)
+		// mkdir -p
+		// write file
+
+		err := os.MkdirAll(path.Dir(p), 0755)
+		if err != nil {
+			panic(err)
+		}
+
+		err = os.WriteFile(p, []byte("Hello, World!"), 0644)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
-func printCommands(cmd Command, level int) {
-	for i := 0; i < level; i++ {
-		print("  ")
+type Folder struct {
+	Name       string
+	SubFolders []*Folder
+	Files      []*File
+}
+
+type File struct {
+	Name string
+	Data []byte
+}
+
+func structureFolders(cmd Command, level int, result *Folder) {
+	if len(cmd.Sub) == 0 {
+		return
 	}
-	println("Command:" + namePrint(cmd))
-	for i := 0; i < level; i++ {
-		print("  ")
-	}
-	println("Args:")
-	for _, arg := range cmd.Args {
-		for i := 0; i < level; i++ {
-			print("  ")
+	if level == 0 {
+		file := &File{
+			Name: "cmd.go",
+			Data: MainTemplate(),
 		}
-		println("  ", arg)
-	}
-	for i := 0; i < level; i++ {
-		print("  ")
-	}
-	println("Flags:")
-	for flag, value := range cmd.Flags {
-		for i := 0; i < level; i++ {
-			print("  ")
-		}
-		println("  ", flag, value)
+		result.Files = append(result.Files, file)
 	}
 	for _, sub := range cmd.Sub {
-		printCommands(*sub, level+1)
+		if len(sub.Sub) > 0 {
+			folder := &Folder{
+				Name: sub.Name,
+			}
+			result.SubFolders = append(result.SubFolders, folder)
+			structureFolders(*sub, level+1, folder)
+			file := &File{
+				Name: sub.Name + ".go",
+				Data: MainTemplate(),
+			}
+			folder.Files = append(folder.Files, file)
+		} else {
+			file := &File{
+				Name: sub.Name + ".go",
+				Data: MainTemplate(),
+			}
+			result.Files = append(result.Files, file)
+		}
 	}
 }
 
-func namePrint(cmd Command) string {
-	// recursive print
-	if cmd.Parent != nil {
-		return namePrint(*cmd.Parent) + " " + cmd.Name
+func printFullPaths(folder *Folder, path string, paths *[]string) {
+	for _, file := range folder.Files {
+		*paths = append(*paths, path+"/"+folder.Name+"/"+file.Name)
 	}
-	return cmd.Name
-}
-
-func MainTemplate() []byte {
-	return []byte(`
-package main
-
-import "{{ .PkgName }}/cmd"
-
-func main() {
-	cmd.Execute()
-}
-`)
+	for _, sub := range folder.SubFolders {
+		printFullPaths(sub, path+"/"+folder.Name, paths)
+	}
 }
