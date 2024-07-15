@@ -1,0 +1,47 @@
+aws:
+- plugin-test-recursive:
+  - ctrl:
+    - delete:
+      - +resource
+      - something:
+        - --force
+  - manage:
+    - get:
+      - --namespace
+- s3:
+  - ls:
+    - +bucket
+    - --no-paginate
+    - --page-size
+  - cp:
+    - +source
+    - +destination
+  - mv:
+    - +source
+    - +destination
+  - rm
+  - sync
+  - --recursive
+  - --exclude
+  - --include
+- ec2:
+  - run-instances:
+    - --image-id
+    - --instance-type
+    - --key-name
+  - terminate-instances
+  - describe-instances
+  - describe-images
+  - describe-volumes
+  - describe-snapshots
+  - create-tags
+  - delete-tags
+- --profile
+- --endpoint-url
+- --region
+- --output
+- --query
+- --dryrun
+- --debug
+- --version
+- --help
