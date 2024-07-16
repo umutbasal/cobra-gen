@@ -44,4 +44,3 @@ cmd:
 - --dryrun
 - --debug
 - --version
-- --help
