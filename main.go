@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	_ "github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
 	"gopkg.in/yaml.v2"
 )
@@ -70,6 +71,8 @@ func parseNode(name string, value interface{}, parent *Command) {
 				if item[0] == '+' {
 					parent.Args = append(parent.Args, item[1:])
 				} else if item[0] == '-' {
+					item = strings.TrimPrefix(item, "-")
+					item = strings.TrimPrefix(item, "-")
 					parent.Flags[item] = ""
 				} else {
 					sub := Command{
@@ -137,6 +140,14 @@ func main() {
 	//exec gofmt -w . in cmd
 
 	cmd := exec.Command("gofmt", "-w", ".")
+	cmd.Dir = "cmd"
+	err = cmd.Run()
+	if err != nil {
+		panic(err)
+	}
+
+	// goimports -w .
+	cmd = exec.Command("goimports", "-w", ".")
 	cmd.Dir = "cmd"
 	err = cmd.Run()
 	if err != nil {
