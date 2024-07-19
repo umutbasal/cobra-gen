@@ -1,0 +1,9 @@
+cmd:
+    aws:
+        s3:
+            cp:
+                - +src
+                - +dst
+            ls:
+                - +bucket
+                - --page-size
