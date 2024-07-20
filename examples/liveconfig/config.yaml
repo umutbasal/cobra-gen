@@ -1,9 +1,52 @@
 cmd:
-    aws:
-        s3:
-            cp:
-                - +src
-                - +dst
-            ls:
-                - +bucket
-                - --page-size
+- --query
+- --dryrun
+- --debug
+- --version
+- --profile
+- --endpoint-url
+- --region
+- --output
+- plugin-test-recursive:
+  - ctrl:
+    - delete:
+      - +resource
+      - something:
+        - --force
+  - manage:
+    - get:
+      - --namespace
+- s3:
+  - --exclude
+  - --include
+  - --recursive
+  - ls:
+    - +bucket
+    - --no-paginate
+    - --page-size
+  - cp:
+    - +source
+    - +destination
+  - mv:
+    - +source
+    - +destination
+  - rm
+  - sync
+  - cpp:
+    - --d
+    - q:
+      - +a
+      - --aq
+      - --aqd
+- ec2:
+  - run-instances:
+    - --key-name
+    - --image-id
+    - --instance-type
+  - terminate-instances
+  - describe-instances
+  - describe-images
+  - describe-volumes
+  - describe-snapshots
+  - create-tags
+  - delete-tags

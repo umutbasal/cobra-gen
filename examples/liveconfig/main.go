@@ -5,11 +5,10 @@ import (
 	"io/ioutil"
 	"os"
 	"slices"
+	"strings"
 
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
-
-type Command map[string]interface{}
 
 type CLIConfig struct {
 	Cmd map[string]interface{} `yaml:"cmd"`
@@ -36,118 +35,249 @@ func main() {
 		}
 	}
 
-	current := generateNestedMap(keys, values)
+	//current := buildCommand(keys, values)
 
-	// shitcode to reset the refs
-	var source map[string]interface{}
-	sourcedata, err := yaml.Marshal(current)
-	if err != nil {
-		fmt.Printf("Error marshalling current: %v\n", err)
-		return
-	}
-	err = yaml.Unmarshal(sourcedata, &source)
+	//	currentm1 := buildMap(current)
 
-	err = mergeMaps(config.Cmd, source)
-	if err != nil {
-		fmt.Printf("Error merging maps: %v\n", err)
-		return
-	}
+	//	y1, _ := yaml.Marshal(currentm1)
+	//fmt.Println("New command:")
+	//fmt.Printf("%s\n", y1)
 
-	c, _ := yaml.Marshal(config)
-	fmt.Println(string(c))
+	cmd := parseYaml(config.Cmd)
+
+	buildCommand2(&cmd, keys, values)
+	resm := buildMap(cmd)
+
+	config.Cmd = resm
 
 	saveConfig(config)
 }
+func buildCommand2(root *Command, keys, values []string) {
+	current := root
+	depth := 0
+	found := false
 
-func mergeMaps(dst, src map[string]interface{}) error {
-	for srcKey, srcValue := range src {
-		if srcValueAsMap, ok := srcValue.(map[string]interface{}); ok { // handle maps
-			if dstValue, ok := dst[srcKey]; ok {
-				if dstValueAsMap, ok := dstValue.(map[string]interface{}); ok {
-					err := mergeMaps(dstValueAsMap, srcValueAsMap)
-					if err != nil {
-						return err
-					}
-					continue
-				}
-				// If dstValue is not a map, create a new map and continue merging
-				dst[srcKey] = make(map[string]interface{})
-				err := mergeMaps(dst[srcKey].(map[string]interface{}), srcValueAsMap)
-				if err != nil {
-					return err
-				}
-			} else {
-				dst[srcKey] = make(map[string]interface{})
-				err := mergeMaps(dst[srcKey].(map[string]interface{}), srcValueAsMap)
-				if err != nil {
-					return err
-				}
-			}
-		} else if srcValueAsSlice, ok := srcValue.([]interface{}); ok { // handle slices
-			if dstValue, ok := dst[srcKey]; ok {
-				if dstValueAsSlice, ok := dstValue.([]interface{}); ok {
-					for _, srcValueAsSliceElement := range srcValueAsSlice {
-						if !slices.Contains(dstValueAsSlice, srcValueAsSliceElement) {
-							dstValueAsSlice = append(dstValueAsSlice, srcValueAsSliceElement)
+	for _, c := range current.Sub {
+		if len(keys) <= depth {
+			break
+		}
+		if c.Name == keys[depth] {
+			found = true
+			if len(keys)-1 <= depth {
+				for _, value := range values {
+					if value[0] == '-' {
+						if _, ok := c.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")]; !ok {
+							c.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")] = ""
 						}
+					} else {
+						c.Args = append(c.Args, value[1:])
 					}
-					dst[srcKey] = dstValueAsSlice
-					continue
 				}
-				// If dstValue is not a slice, replace with srcValueAsSlice
-				dst[srcKey] = srcValueAsSlice
-			} else {
-				dst[srcKey] = srcValueAsSlice
+				return
 			}
-		} else { // handle other types
-			dst[srcKey] = srcValue
+			current = c
+			depth++
+			buildCommand2(c, keys[depth:], values)
+			return
 		}
 	}
-	return nil
+
+	if !found {
+		for i := depth; i < len(keys); i++ {
+			sub := &Command{
+				Name:  keys[i],
+				Flags: make(map[string]string),
+			}
+			current.Sub = append(current.Sub, sub)
+			current = sub
+		}
+		for _, value := range values {
+			if value[0] == '-' {
+				if current.Flags == nil {
+					current.Flags = make(map[string]string)
+				}
+				if _, ok := current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")]; !ok {
+					current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")] = ""
+				}
+			} else {
+				if current.Args == nil {
+					current.Args = []string{}
+				}
+				if !slices.Contains(current.Args, value[1:]) {
+					current.Args = append(current.Args, value[1:])
+				}
+			}
+		}
+	}
 }
 
-func generateNestedMap(keys []string, values []string) map[string]interface{} {
-	output := make(map[string]interface{})
+func buildCommand(keys, values []string) Command {
+	root := Command{}
+	current := &root
 
-	if len(keys) == 0 {
-		return output
+	for i := 0; i < len(keys); i++ {
+		current.Name = keys[i]
+		if i+1 < len(keys) {
+			sub := Command{}
+			current.Sub = append(current.Sub, &sub)
+			current = &sub
+		}
 	}
 
-	current := output
-	for i, key := range keys {
-		if i == len(keys)-1 {
-			current[key] = values
+	for _, value := range values {
+		if value[0] == '-' {
+			if current.Flags == nil {
+				current.Flags = make(map[string]string)
+			}
+			if _, ok := current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")]; !ok {
+				current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")] = ""
+			}
 		} else {
-			next := make(map[string]interface{})
-			current[key] = next
-			current = next
+			if current.Args == nil {
+				current.Args = []string{}
+			}
+			current.Args = append(current.Args, value[1:])
 		}
 	}
 
-	return output
+	return root
 }
+
+func buildMap(cmd Command) map[string]interface{} {
+	yamlConfig := make(map[string]interface{})
+	var root interface{}
+	buildNode(cmd, &root)
+	yamlConfig[cmd.Name] = root
+	return yamlConfig
+}
+
+func buildNode(cmd Command, yamlNode *interface{}) {
+	elements := []interface{}{}
+
+	// Add arguments with '+' prefix
+	for _, arg := range cmd.Args {
+		elements = append(elements, "+"+arg)
+	}
+
+	// Add flags with '--' prefix
+	for flag := range cmd.Flags {
+		elements = append(elements, "--"+flag)
+	}
+
+	// Add subcommands
+	for _, sub := range cmd.Sub {
+		if len(sub.Sub) == 0 && len(sub.Args) == 0 && len(sub.Flags) == 0 {
+			elements = append(elements, sub.Name)
+			continue
+		}
+		subNode := make(map[string]interface{})
+		var subYamlNode interface{}
+		buildNode(*sub, &subYamlNode)
+		subNode[sub.Name] = subYamlNode
+		elements = append(elements, subNode)
+	}
+	if len(elements) > 0 {
+		*yamlNode = elements
+	} else {
+		*yamlNode = nil
+	}
+}
+
+type Command struct {
+	Name     string
+	FuncName string
+	PkgName  string
+	PkgPath  string
+	Args     []string
+	Flags    map[string]string
+	Sub      []*Command
+	Parent   *Command
+}
+
+func parseYaml(yamlConfig map[string]interface{}) Command {
+	var rootStr string
+	if len(yamlConfig) != 1 {
+		panic("Root command must be only one")
+	}
+	for key := range yamlConfig {
+		rootStr = key
+	}
+	root := Command{
+		Name:  rootStr,
+		Flags: make(map[string]string),
+	}
+
+	for key, value := range yamlConfig {
+		parseNode(key, value, &root)
+	}
+
+	return root
+}
+
+func parseNode(name string, value interface{}, parent *Command) {
+	switch v := value.(type) {
+	case []interface{}:
+		for _, item := range v {
+			switch item := item.(type) {
+			case string:
+				if item[0] == '+' {
+					parent.Args = append(parent.Args, item[1:])
+				} else if item[0] == '-' {
+					item = strings.TrimPrefix(item, "-")
+					item = strings.TrimPrefix(item, "-")
+					parent.Flags[item] = ""
+				} else {
+					sub := Command{
+						Name:   item,
+						Flags:  make(map[string]string),
+						Parent: parent,
+					}
+					parseNode(item, nil, &sub)
+					parent.Sub = append(parent.Sub, &sub)
+				}
+			case map[interface{}]interface{}:
+				for subCommand, subValue := range item {
+					sub := Command{
+						Name:   subCommand.(string),
+						Flags:  make(map[string]string),
+						Parent: parent,
+					}
+					parseNode(subCommand.(string), subValue, &sub)
+					parent.Sub = append(parent.Sub, &sub)
+				}
+			}
+		}
+	case map[interface{}]interface{}:
+		for subCommand, subValue := range v {
+			sub := Command{
+				Name:   subCommand.(string),
+				Flags:  make(map[string]string),
+				Parent: parent,
+			}
+			parseNode(subCommand.(string), subValue, &sub)
+			parent.Sub = append(parent.Sub, &sub)
+		}
+	}
+}
+
 func loadConfig() *CLIConfig {
 	config := &CLIConfig{Cmd: make(map[string]interface{})}
 
-	data, err := ioutil.ReadFile(configFile)
+	var yamlConfig map[string]interface{}
+	f := "config.yaml"
+	yamlData, err := os.ReadFile(f)
+	err = yaml.Unmarshal(yamlData, &yamlConfig)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return config
-		}
-		fmt.Printf("Error reading config file: %v\n", err)
-		return config
+		panic(err)
 	}
 
-	err = yaml.Unmarshal(data, config)
-	if err != nil {
-		fmt.Printf("Error parsing config file: %v\n", err)
-	}
+	config.Cmd = yamlConfig
 
 	return config
 }
 
 func saveConfig(config *CLIConfig) {
-	data, err := yaml.Marshal(config)
+	data, err := yaml.Marshal(config.Cmd)
 	if err != nil {
 		fmt.Printf("Error generating YAML: %v\n", err)
 		return
