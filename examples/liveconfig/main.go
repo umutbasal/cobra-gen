@@ -35,14 +35,6 @@ func main() {
 		}
 	}
 
-	//current := buildCommand(keys, values)
-
-	//	currentm1 := buildMap(current)
-
-	//	y1, _ := yaml.Marshal(currentm1)
-	//fmt.Println("New command:")
-	//fmt.Printf("%s\n", y1)
-
 	cmd := parseYaml(config.Cmd)
 
 	buildCommand2(&cmd, keys, values)
@@ -52,6 +44,7 @@ func main() {
 
 	saveConfig(config)
 }
+
 func buildCommand2(root *Command, keys, values []string) {
 	current := root
 	depth := 0
@@ -109,38 +102,6 @@ func buildCommand2(root *Command, keys, values []string) {
 			}
 		}
 	}
-}
-
-func buildCommand(keys, values []string) Command {
-	root := Command{}
-	current := &root
-
-	for i := 0; i < len(keys); i++ {
-		current.Name = keys[i]
-		if i+1 < len(keys) {
-			sub := Command{}
-			current.Sub = append(current.Sub, &sub)
-			current = &sub
-		}
-	}
-
-	for _, value := range values {
-		if value[0] == '-' {
-			if current.Flags == nil {
-				current.Flags = make(map[string]string)
-			}
-			if _, ok := current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")]; !ok {
-				current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")] = ""
-			}
-		} else {
-			if current.Args == nil {
-				current.Args = []string{}
-			}
-			current.Args = append(current.Args, value[1:])
-		}
-	}
-
-	return root
 }
 
 func buildMap(cmd Command) map[string]interface{} {
