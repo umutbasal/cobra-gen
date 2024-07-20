@@ -8,7 +8,6 @@ import (
 
 	_ "github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
-	"gopkg.in/yaml.v2"
 )
 
 var modName string
@@ -110,20 +109,13 @@ func parseNode(name string, value interface{}, parent *Command) {
 
 func main() {
 
-	if len(os.Args) >= 1 {
+	if len(os.Args) > 1 {
 		generate()
 		return
 	}
+	c := loadConfig()
 
-	var yamlConfig map[string]interface{}
-	f := "config.yaml"
-	yamlData, err := os.ReadFile(f)
-	err = yaml.Unmarshal(yamlData, &yamlConfig)
-	if err != nil {
-		panic(err)
-	}
-
-	commands := parseYaml(yamlConfig)
+	commands := parseYaml(c.Cmd)
 	folders := &Folder{
 		Name: "cmd",
 	}
@@ -147,7 +139,7 @@ func main() {
 
 	cmd := exec.Command("gofmt", "-w", ".")
 	cmd.Dir = "cmd"
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		panic(err)
 	}
