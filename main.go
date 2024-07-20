@@ -109,6 +109,12 @@ func parseNode(name string, value interface{}, parent *Command) {
 }
 
 func main() {
+
+	if len(os.Args) >= 1 {
+		generate()
+		return
+	}
+
 	var yamlConfig map[string]interface{}
 	f := "config.yaml"
 	yamlData, err := os.ReadFile(f)

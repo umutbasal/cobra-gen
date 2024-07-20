@@ -16,7 +16,7 @@ type CLIConfig struct {
 
 const configFile = "config.yaml"
 
-func main() {
+func generate() {
 	args := os.Args[1:]
 	if len(args) == 0 {
 		fmt.Println("No commands provided.")
@@ -141,83 +141,6 @@ func buildNode(cmd Command, yamlNode *interface{}) {
 		*yamlNode = elements
 	} else {
 		*yamlNode = nil
-	}
-}
-
-type Command struct {
-	Name     string
-	FuncName string
-	PkgName  string
-	PkgPath  string
-	Args     []string
-	Flags    map[string]string
-	Sub      []*Command
-	Parent   *Command
-}
-
-func parseYaml(yamlConfig map[string]interface{}) Command {
-	var rootStr string
-	if len(yamlConfig) != 1 {
-		panic("Root command must be only one")
-	}
-	for key := range yamlConfig {
-		rootStr = key
-	}
-	root := Command{
-		Name:  rootStr,
-		Flags: make(map[string]string),
-	}
-
-	for key, value := range yamlConfig {
-		parseNode(key, value, &root)
-	}
-
-	return root
-}
-
-func parseNode(name string, value interface{}, parent *Command) {
-	switch v := value.(type) {
-	case []interface{}:
-		for _, item := range v {
-			switch item := item.(type) {
-			case string:
-				if item[0] == '+' {
-					parent.Args = append(parent.Args, item[1:])
-				} else if item[0] == '-' {
-					item = strings.TrimPrefix(item, "-")
-					item = strings.TrimPrefix(item, "-")
-					parent.Flags[item] = ""
-				} else {
-					sub := Command{
-						Name:   item,
-						Flags:  make(map[string]string),
-						Parent: parent,
-					}
-					parseNode(item, nil, &sub)
-					parent.Sub = append(parent.Sub, &sub)
-				}
-			case map[interface{}]interface{}:
-				for subCommand, subValue := range item {
-					sub := Command{
-						Name:   subCommand.(string),
-						Flags:  make(map[string]string),
-						Parent: parent,
-					}
-					parseNode(subCommand.(string), subValue, &sub)
-					parent.Sub = append(parent.Sub, &sub)
-				}
-			}
-		}
-	case map[interface{}]interface{}:
-		for subCommand, subValue := range v {
-			sub := Command{
-				Name:   subCommand.(string),
-				Flags:  make(map[string]string),
-				Parent: parent,
-			}
-			parseNode(subCommand.(string), subValue, &sub)
-			parent.Sub = append(parent.Sub, &sub)
-		}
 	}
 }
 

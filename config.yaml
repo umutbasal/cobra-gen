@@ -1,4 +1,12 @@
 cmd:
+- --region
+- --output
+- --query
+- --dryrun
+- --debug
+- --version
+- --profile
+- --endpoint-url
 - plugin-test-recursive:
   - ctrl:
     - delete:
@@ -9,6 +17,9 @@ cmd:
     - get:
       - --namespace
 - s3:
+  - --recursive
+  - --exclude
+  - --include
   - ls:
     - +bucket
     - --no-paginate
@@ -21,14 +32,13 @@ cmd:
     - +destination
   - rm
   - sync
-  - --recursive
-  - --exclude
-  - --include
+  - cpp:
+    - --sasd
 - ec2:
   - run-instances:
-    - --image-id
     - --instance-type
     - --key-name
+    - --image-id
   - terminate-instances
   - describe-instances
   - describe-images
@@ -36,11 +46,3 @@ cmd:
   - describe-snapshots
   - create-tags
   - delete-tags
-- --profile
-- --endpoint-url
-- --region
-- --output
-- --query
-- --dryrun
-- --debug
-- --version
