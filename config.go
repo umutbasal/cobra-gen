@@ -37,7 +37,7 @@ func generate() {
 
 	cmd := parseYaml(config.Cmd)
 
-	buildCommand2(&cmd, keys, values)
+	updateCommands(&cmd, keys, values)
 	resm := buildMap(cmd)
 
 	config.Cmd = resm
@@ -45,60 +45,62 @@ func generate() {
 	saveConfig(config)
 }
 
-func buildCommand2(root *Command, keys, values []string) {
+func updateCommands(root *Command, keys, values []string) {
 	current := root
 	depth := 0
-	found := false
 
-	for _, c := range current.Sub {
-		if len(keys) <= depth {
-			break
+	for {
+		// If we have processed all keys, add the values
+		if depth >= len(keys) {
+			addValues(current, values)
+			return
 		}
-		if c.Name == keys[depth] {
-			found = true
-			if len(keys)-1 <= depth {
-				for _, value := range values {
-					if value[0] == '-' {
-						if _, ok := c.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")]; !ok {
-							c.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")] = ""
-						}
-					} else {
-						c.Args = append(c.Args, value[1:])
-					}
-				}
-				return
+
+		// Search for an existing subcommand matching the current key
+		found := false
+		for _, sub := range current.Sub {
+			if sub.Name == keys[depth] {
+				current = sub
+				found = true
+				depth++
+				break
 			}
-			current = c
-			depth++
-			buildCommand2(c, keys[depth:], values)
+		}
+
+		// If no matching subcommand was found, create a new one
+		if !found {
+			for i := depth; i < len(keys); i++ {
+				newSub := &Command{
+					Name:  keys[i],
+					Flags: make(map[string]string),
+				}
+				current.Sub = append(current.Sub, newSub)
+				current = newSub
+			}
+			addValues(current, values)
 			return
 		}
 	}
+}
 
-	if !found {
-		for i := depth; i < len(keys); i++ {
-			sub := &Command{
-				Name:  keys[i],
-				Flags: make(map[string]string),
+// Helper function to add values to the command
+func addValues(cmd *Command, values []string) {
+	for _, value := range values {
+		if value[0] == '-' {
+			flagName := strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")
+			if cmd.Flags == nil {
+				cmd.Flags = make(map[string]string)
 			}
-			current.Sub = append(current.Sub, sub)
-			current = sub
-		}
-		for _, value := range values {
-			if value[0] == '-' {
-				if current.Flags == nil {
-					current.Flags = make(map[string]string)
-				}
-				if _, ok := current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")]; !ok {
-					current.Flags[strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")] = ""
-				}
-			} else {
-				if current.Args == nil {
-					current.Args = []string{}
-				}
-				if !slices.Contains(current.Args, value[1:]) {
-					current.Args = append(current.Args, value[1:])
-				}
+			if _, exists := cmd.Flags[flagName]; !exists {
+				cmd.Flags[flagName] = ""
+			}
+		} else {
+			arg := value[1:]
+			if cmd.Args == nil {
+				cmd.Args = []string{}
+			}
+			if !slices.Contains(cmd.Args, arg) {
+				cmd.Args = append(cmd.Args, arg)
 			}
 		}
 	}
