@@ -31,6 +31,31 @@ func init() {
 	modName = modFile.Module.Mod.Path
 }
 
+func main() {
+	if len(os.Args) > 1 {
+		updateConfig()
+		return
+	}
+
+	checkDep()
+
+	c := loadConfig()
+	commands := parseYaml(c.Cmd)
+	// if cmd exists throw error
+	if _, err := os.Stat("cmd"); err == nil {
+		panic("cmd directory already exists")
+	}
+	folders := &Folder{Name: "cmd"}
+
+	structureFolders(commands, 0, folders)
+	var files []File
+	fillForTemplate(folders, ".", &files)
+
+	createFilesAndDirectories(files)
+	formatCode()
+	createExamplesMain()
+}
+
 type Command struct {
 	Name     string
 	FuncName string
@@ -84,31 +109,6 @@ func parseMap(m map[interface{}]interface{}, parent *Command) {
 		parseNode(key.(string), value, sub)
 		parent.Sub = append(parent.Sub, sub)
 	}
-}
-
-func main() {
-	if len(os.Args) > 1 {
-		updateConfig()
-		return
-	}
-
-	checkDep()
-
-	c := loadConfig()
-	commands := parseYaml(c.Cmd)
-	// if cmd exists throw error
-	if _, err := os.Stat("cmd"); err == nil {
-		panic("cmd directory already exists")
-	}
-	folders := &Folder{Name: "cmd"}
-
-	structureFolders(commands, 0, folders)
-	var files []File
-	fillForTemplate(folders, ".", &files)
-
-	createFilesAndDirectories(files)
-	formatCode()
-	createExamplesMain()
 }
 
 func createFilesAndDirectories(files []File) {
