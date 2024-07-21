@@ -40,23 +40,16 @@ type Command struct {
 	Parent   *Command
 }
 
-func parseYaml(yamlConfig map[string]interface{}) Command {
-	var rootStr string
-	if len(yamlConfig) != 1 {
+func parseYaml(m map[string]interface{}) Command {
+	if len(m) != 1 {
 		panic("Root command must be only one")
 	}
-	for key := range yamlConfig {
+	rootStr := ""
+	for key := range m {
 		rootStr = key
 	}
-	root := Command{
-		Name:  rootStr,
-		Flags: make(map[string]string),
-	}
-
-	for key, value := range yamlConfig {
-		parseNode(key, value, &root)
-	}
-
+	root := Command{Name: rootStr, Flags: make(map[string]string)}
+	parseNode(rootStr, m[rootStr], &root)
 	return root
 }
 
@@ -69,40 +62,26 @@ func parseNode(name string, value interface{}, parent *Command) {
 				if item[0] == '+' {
 					parent.Args = append(parent.Args, item[1:])
 				} else if item[0] == '-' {
-					item = strings.TrimPrefix(item, "-")
-					item = strings.TrimPrefix(item, "-")
-					parent.Flags[item] = ""
+					flag := strings.TrimPrefix(strings.TrimPrefix(item, "-"), "-")
+					parent.Flags[flag] = ""
 				} else {
-					sub := Command{
-						Name:   item,
-						Flags:  make(map[string]string),
-						Parent: parent,
-					}
-					parseNode(item, nil, &sub)
-					parent.Sub = append(parent.Sub, &sub)
+					sub := &Command{Name: item, Flags: make(map[string]string), Parent: parent}
+					parent.Sub = append(parent.Sub, sub)
 				}
 			case map[interface{}]interface{}:
-				for subCommand, subValue := range item {
-					sub := Command{
-						Name:   subCommand.(string),
-						Flags:  make(map[string]string),
-						Parent: parent,
-					}
-					parseNode(subCommand.(string), subValue, &sub)
-					parent.Sub = append(parent.Sub, &sub)
-				}
+				parseMap(item, parent)
 			}
 		}
 	case map[interface{}]interface{}:
-		for subCommand, subValue := range v {
-			sub := Command{
-				Name:   subCommand.(string),
-				Flags:  make(map[string]string),
-				Parent: parent,
-			}
-			parseNode(subCommand.(string), subValue, &sub)
-			parent.Sub = append(parent.Sub, &sub)
-		}
+		parseMap(v, parent)
+	}
+}
+
+func parseMap(m map[interface{}]interface{}, parent *Command) {
+	for key, value := range m {
+		sub := &Command{Name: key.(string), Flags: make(map[string]string), Parent: parent}
+		parseNode(key.(string), value, sub)
+		parent.Sub = append(parent.Sub, sub)
 	}
 }
 
