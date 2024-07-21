@@ -17,13 +17,13 @@ go install github.com/umutbasal/cobra-gen@latest
 ## Usage
 
 Lets design simple aws cli with cobra-gen
-we will have s3 and ec2 commands
+we will handle below s3 and ec2 commands
 
 - `aws --profile`
 - `aws s3 ls mybucket --page-size 10`
 - `aws ec2 create-instance`
 
-Generate config by simply converting commands to below
+Generate config by simply converting commands to below format and run them in your fresh go project.
 
 ```sh
 cobra-gen --profile
