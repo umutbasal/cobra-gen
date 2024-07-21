@@ -65,6 +65,8 @@ Let's create a basic AWS CLI with `cobra-gen` that handles `s3` and `ec2` comman
    - `./cmd/ec2/create-instance.go`
    - `./cmd/ec2/ec2.go`
 
+  See the [examples/aws](examples/aws) directory for the generated code.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
