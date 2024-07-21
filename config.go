@@ -25,41 +25,42 @@ func generate() {
 
 	config := loadConfig()
 
-	keys := []string{}
-	values := []string{}
-	for _, arg := range args {
-		if arg[0] == '-' || arg[0] == '+' {
-			values = append(values, arg)
-		} else {
-			keys = append(keys, arg)
-		}
-	}
-
+	commands, params := partitionArgs(args)
 	cmd := parseYaml(config.Cmd)
 
-	updateCommands(&cmd, keys, values)
-	resm := buildMap(cmd)
-
-	config.Cmd = resm
+	updateCommands(&cmd, commands, params)
+	config.Cmd = buildMap(cmd)
 
 	saveConfig(config)
 }
 
-func updateCommands(root *Command, keys, values []string) {
+// Helper function to partition arguments into commands and params
+func partitionArgs(args []string) (commands []string, params []string) {
+	for _, arg := range args {
+		if arg[0] == '-' || arg[0] == '+' {
+			params = append(params, arg)
+		} else {
+			commands = append(commands, arg)
+		}
+	}
+	return commands, params
+}
+
+func updateCommands(root *Command, commands, params []string) {
 	current := root
 	depth := 0
 
 	for {
-		// If we have processed all keys, add the values
-		if depth >= len(keys) {
-			addValues(current, values)
+		// If we have processed all command, add the params to the current command
+		if depth >= len(commands) {
+			addParams(current, params)
 			return
 		}
 
-		// Search for an existing subcommand matching the current key
+		// Search for an last subcommand matching the current command
 		found := false
 		for _, sub := range current.Sub {
-			if sub.Name == keys[depth] {
+			if sub.Name == commands[depth] {
 				current = sub
 				found = true
 				depth++
@@ -69,25 +70,25 @@ func updateCommands(root *Command, keys, values []string) {
 
 		// If no matching subcommand was found, create a new one
 		if !found {
-			for i := depth; i < len(keys); i++ {
+			for i := depth; i < len(commands); i++ {
 				newSub := &Command{
-					Name:  keys[i],
+					Name:  commands[i],
 					Flags: make(map[string]string),
 				}
 				current.Sub = append(current.Sub, newSub)
 				current = newSub
 			}
-			addValues(current, values)
+			addParams(current, params)
 			return
 		}
 	}
 }
 
-// Helper function to add values to the command
-func addValues(cmd *Command, values []string) {
-	for _, value := range values {
-		if value[0] == '-' {
-			flagName := strings.TrimPrefix(strings.TrimPrefix(value, "-"), "-")
+// Helper function to add params to the command
+func addParams(cmd *Command, params []string) {
+	for _, param := range params {
+		if param[0] == '-' {
+			flagName := strings.TrimPrefix(strings.TrimPrefix(param, "-"), "-")
 			if cmd.Flags == nil {
 				cmd.Flags = make(map[string]string)
 			}
@@ -95,7 +96,7 @@ func addValues(cmd *Command, values []string) {
 				cmd.Flags[flagName] = ""
 			}
 		} else {
-			arg := value[1:]
+			arg := param[1:]
 			if cmd.Args == nil {
 				cmd.Args = []string{}
 			}
