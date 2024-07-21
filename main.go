@@ -120,7 +120,7 @@ func main() {
 	}
 	structureFolders(commands, 0, folders)
 	var files []File
-	printFullPaths(folders, ".", &files)
+	fillForTemplate(folders, ".", &files)
 	for _, f := range files {
 		println(f.Path)
 
@@ -201,36 +201,40 @@ func structureFolders(cmd Command, level int, result *Folder) {
 	}
 }
 
-func printFullPaths(folder *Folder, path string, files *[]File) {
+func fillForTemplate(folder *Folder, path string, files *[]File) {
+	folder.Name = pkgNaming(folder.Name)
 	for _, file := range folder.Files {
-		if folder.Name == "cmd" {
-			file.Cmd.FuncName = ""
-		}
-		folder.Name = pkgNaming(folder.Name)
-		file.Path = path + "/" + folder.Name + "/" + file.Name
-		file.PkgPath = path + "/" + folder.Name
-		file.PkgPath = strings.TrimPrefix(file.PkgPath, "./")
-		file.ParentPkgPath = strings.TrimPrefix(path, "./")
-		if file.Cmd.Parent != nil {
-			file.ParentPkg = pkgNaming(file.Cmd.Parent.Name)
-		}
-		file.RootPkgName = modName
-		file.PkgName = folder.Name
-		file.Cmd.FuncName = kebabToCamel(file.Cmd.Name)
-		file.Cmd.File = file
+		modifyFile(file, folder, path)
 		*files = append(*files, *file)
 	}
 	for _, sub := range folder.SubFolders {
-		printFullPaths(sub, path+"/"+folder.Name, files)
+		fillForTemplate(sub, path+"/"+folder.Name, files)
 	}
 }
 
-func kebabToCamel(s string) string {
-	var result string
-	for _, part := range strings.Split(s, "-") {
-		result += strings.Title(part)
+func modifyFile(file *File, folder *Folder, path string) {
+	if folder.Name == "cmd" {
+		file.Cmd.FuncName = ""
 	}
-	return result
+	filePath := path + "/" + folder.Name
+	file.Path = filePath + "/" + file.Name
+	file.PkgPath = strings.TrimPrefix(filePath, "./")
+	file.ParentPkgPath = strings.TrimPrefix(path, "./")
+	if file.Cmd.Parent != nil {
+		file.ParentPkg = pkgNaming(file.Cmd.Parent.Name)
+	}
+	file.RootPkgName = modName
+	file.PkgName = folder.Name
+	file.Cmd.FuncName = kebabToCamel(file.Cmd.Name)
+	file.Cmd.File = file
+}
+
+func kebabToCamel(s string) string {
+	parts := strings.Split(s, "-")
+	for i, part := range parts {
+		parts[i] = strings.Title(part)
+	}
+	return strings.Join(parts, "")
 }
 
 func pkgNaming(s string) string {
