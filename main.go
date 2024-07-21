@@ -88,7 +88,7 @@ func parseMap(m map[interface{}]interface{}, parent *Command) {
 
 func main() {
 	if len(os.Args) > 1 {
-		generate()
+		updateConfig()
 		return
 	}
 

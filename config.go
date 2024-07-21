@@ -15,7 +15,7 @@ type CLIConfig struct {
 
 const configFile = "config.yaml"
 
-func generate() {
+func updateConfig() {
 	args := os.Args[1:]
 	if len(args) == 0 {
 		fmt.Println("No commands provided.")
