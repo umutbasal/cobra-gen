@@ -31,7 +31,7 @@ cobra-gen s3 ls +mybucket --page-size
 cobra-gen ec2 create-instance
 ```
 
-This will generate a yaml config, you can edit it as you like with same format.
+This will generate a yaml config in ".cobra-gen.yaml", you can edit it as you like with same format.
 
 ```yaml
 cmd:
