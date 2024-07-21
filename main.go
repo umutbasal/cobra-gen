@@ -33,10 +33,9 @@ func init() {
 type Command struct {
 	Name     string
 	FuncName string
-	PkgName  string
-	PkgPath  string
 	Args     []string
 	Flags    map[string]string
+	File     *File
 	Sub      []*Command
 	Parent   *Command
 }
@@ -229,8 +228,7 @@ func printFullPaths(folder *Folder, path string, files *[]File) {
 		file.RootPkgName = modName
 		file.PkgName = folder.Name
 		file.Cmd.FuncName = kebabToCamel(file.Cmd.Name)
-		file.Cmd.PkgName = pkgNaming(file.Cmd.Name)
-		file.Cmd.PkgPath = file.PkgPath
+		file.Cmd.File = file
 		*files = append(*files, *file)
 	}
 	for _, sub := range folder.SubFolders {

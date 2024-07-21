@@ -171,4 +171,7 @@ func saveConfig(config *CLIConfig) {
 	if err != nil {
 		fmt.Printf("Error writing config file: %v\n", err)
 	}
+
+	fmt.Println("Config file updated.")
+	fmt.Println(string(data))
 }

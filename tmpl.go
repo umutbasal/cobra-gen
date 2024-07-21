@@ -15,7 +15,7 @@ import (
 	{{ if .Cmd.Sub}}
 	{{ range .Cmd.Sub }}
 	{{ if .Sub}}
-	"{{ $r }}/{{ .PkgPath }}"
+	"{{ $r }}/{{ .File.PkgPath }}"
 	{{ end }}
 	{{ end }}
 	{{ end }}
@@ -65,7 +65,7 @@ func init() {
 	{{ if .Cmd.Sub}}
 	{{ range .Cmd.Sub }}
 	{{ if .Sub}}
-	{{ if ne $base.FuncName "Cmd"}}{{ $base.FuncName }}{{ end }}Cmd.AddCommand({{.PkgName}}.{{ .FuncName }}Cmd)
+	{{ if ne $base.FuncName "Cmd"}}{{ $base.FuncName }}{{ end }}Cmd.AddCommand({{.File.PkgName}}.{{ .FuncName }}Cmd)
 	{{ end }}
 	{{ end }}
 	{{ end }}
