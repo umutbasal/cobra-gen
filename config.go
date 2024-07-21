@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"slices"
 	"strings"
@@ -146,14 +145,14 @@ func buildNode(cmd Command) interface{} {
 func loadConfig() *CLIConfig {
 	config := &CLIConfig{Cmd: make(map[string]interface{})}
 
-	var yamlConfig map[string]interface{}
 	yamlData, err := os.ReadFile(configFile)
-	err = yaml.Unmarshal(yamlData, &yamlConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	config.Cmd = yamlConfig
+	if err = yaml.Unmarshal(yamlData, &config.Cmd); err != nil {
+		panic(err)
+	}
 
 	return config
 }
@@ -165,9 +164,9 @@ func saveConfig(config *CLIConfig) {
 		return
 	}
 
-	err = ioutil.WriteFile(configFile, data, 0644)
-	if err != nil {
+	if err = os.WriteFile(configFile, data, 0644); err != nil {
 		fmt.Printf("Error writing config file: %v\n", err)
+		return
 	}
 
 	fmt.Println("Config file updated.")
