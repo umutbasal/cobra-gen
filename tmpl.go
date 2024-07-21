@@ -27,7 +27,6 @@ var {{ if ne .Cmd.FuncName "Cmd"}}{{ .Cmd.FuncName }}{{ end }}Cmd = &cobra.Comma
 	Short: "{{ .Cmd.Name }} ...",
 	{{ if .Cmd.Args }}
 	Args: cobra.MatchAll(cobra.ExactArgs({{ len .Cmd.Args }}), cobra.OnlyValidArgs),
-	ValidArgs: []string{"{{ range $arg := .Cmd.Args }}{{ $arg }}{{ end }}"},
 	{{ end }}
 	Run: func(cmd *cobra.Command, args []string) {
 		{{if .Cmd.Args }}
