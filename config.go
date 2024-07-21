@@ -13,7 +13,7 @@ type CLIConfig struct {
 	Cmd map[string]interface{} `yaml:"cmd"`
 }
 
-const configFile = "config.yaml"
+const configFile = ".cobra-gen.yaml"
 
 func updateConfig() {
 	args := os.Args[1:]
@@ -147,7 +147,15 @@ func loadConfig() *CLIConfig {
 
 	yamlData, err := os.ReadFile(configFile)
 	if err != nil {
-		panic(err)
+		if os.IsNotExist(err) {
+			fmt.Println("Config file not found. Creating new one.")
+			config.Cmd = map[string]interface{}{
+				"cmd": nil,
+			}
+			saveConfig(config)
+			return config
+		}
+		return nil
 	}
 
 	if err = yaml.Unmarshal(yamlData, &config.Cmd); err != nil {
