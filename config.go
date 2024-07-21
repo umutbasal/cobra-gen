@@ -104,16 +104,14 @@ func buildCommand2(root *Command, keys, values []string) {
 	}
 }
 
-func buildMap(cmd Command) map[string]interface{} {
-	yamlConfig := make(map[string]interface{})
-	var root interface{}
-	buildNode(cmd, &root)
-	yamlConfig[cmd.Name] = root
-	return yamlConfig
+func buildMap(cmd Command) (m map[string]interface{}) {
+	m = make(map[string]interface{})
+	m[cmd.Name] = buildNode(cmd)
+	return m
 }
 
-func buildNode(cmd Command, yamlNode *interface{}) {
-	elements := []interface{}{}
+func buildNode(cmd Command) interface{} {
+	var elements []interface{}
 
 	// Add arguments with '+' prefix
 	for _, arg := range cmd.Args {
@@ -129,27 +127,24 @@ func buildNode(cmd Command, yamlNode *interface{}) {
 	for _, sub := range cmd.Sub {
 		if len(sub.Sub) == 0 && len(sub.Args) == 0 && len(sub.Flags) == 0 {
 			elements = append(elements, sub.Name)
-			continue
+		} else {
+			subNode := make(map[string]interface{})
+			subNode[sub.Name] = buildNode(*sub)
+			elements = append(elements, subNode)
 		}
-		subNode := make(map[string]interface{})
-		var subYamlNode interface{}
-		buildNode(*sub, &subYamlNode)
-		subNode[sub.Name] = subYamlNode
-		elements = append(elements, subNode)
 	}
+
 	if len(elements) > 0 {
-		*yamlNode = elements
-	} else {
-		*yamlNode = nil
+		return elements
 	}
+	return nil
 }
 
 func loadConfig() *CLIConfig {
 	config := &CLIConfig{Cmd: make(map[string]interface{})}
 
 	var yamlConfig map[string]interface{}
-	f := "config.yaml"
-	yamlData, err := os.ReadFile(f)
+	yamlData, err := os.ReadFile(configFile)
 	err = yaml.Unmarshal(yamlData, &yamlConfig)
 	if err != nil {
 		panic(err)
