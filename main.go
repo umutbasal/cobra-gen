@@ -183,30 +183,19 @@ func structureFolders(cmd Command, level int, result *Folder) {
 	if len(cmd.Sub) == 0 {
 		return
 	}
+
 	if level == 0 {
-		file := &File{
-			Name: "cmd.go",
-			Cmd:  &cmd,
-		}
-		result.Files = append(result.Files, file)
+		result.Files = append(result.Files, &File{Name: "cmd.go", Cmd: &cmd})
 	}
+
 	for _, sub := range cmd.Sub {
+		file := &File{Name: sub.Name + ".go", Cmd: sub}
 		if len(sub.Sub) > 0 {
-			folder := &Folder{
-				Name: sub.Name,
-			}
+			folder := &Folder{Name: sub.Name}
 			result.SubFolders = append(result.SubFolders, folder)
 			structureFolders(*sub, level+1, folder)
-			file := &File{
-				Name: sub.Name + ".go",
-				Cmd:  sub,
-			}
 			folder.Files = append(folder.Files, file)
 		} else {
-			file := &File{
-				Name: sub.Name + ".go",
-				Cmd:  sub,
-			}
 			result.Files = append(result.Files, file)
 		}
 	}
