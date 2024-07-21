@@ -92,7 +92,7 @@ func main() {
 		return
 	}
 
-	formatCode()
+	checkDep()
 
 	c := loadConfig()
 	commands := parseYaml(c.Cmd)
@@ -125,8 +125,7 @@ func createFilesAndDirectories(files []File) {
 	}
 }
 
-func formatCode() {
-
+func checkDep() {
 	var r bool
 	// check if gofmt exists
 	if !commandExists("gofmt") {
@@ -142,15 +141,18 @@ func formatCode() {
 	if r {
 		panic("")
 	}
+}
+
+func commandExists(cmd string) bool {
+	_, err := exec.Command("which", cmd).Output()
+	return err == nil
+}
+
+func formatCode() {
 
 	runCommand("gofmt", "cmd")
 	//go install golang.org/x/tools/cmd/goimports@latest
 	runCommand("goimports", "cmd")
-}
-
-func commandExists(cmd string) bool {
-	_, err := exec.LookPath(cmd)
-	return err == nil
 }
 
 func runCommand(name, dir string) {
