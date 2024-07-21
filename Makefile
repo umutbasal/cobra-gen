@@ -15,3 +15,4 @@ generate:
 	cd $(DIR) && cobra-gen
 	cd $(DIR) && go mod tidy
 	cp $(DIR)/examples/cobra-gen/main.go $(DIR)/main.go
+	rm -rf $(DIR)/examples
