@@ -1,0 +1,8 @@
+cmd:
+- --profile
+- s3:
+  - ls:
+    - +mybucket
+    - --page-size
+- ec2:
+  - create-instance
