@@ -57,13 +57,14 @@ func main() {
 }
 
 type Command struct {
-	Name     string
-	FuncName string
-	Args     []string
-	Flags    map[string]string
-	File     *File
-	Sub      []*Command
-	Parent   *Command
+	Name        string
+	FuncName    string
+	Args        []string
+	Flags       map[string]string
+	FlagsPretty map[string]string
+	File        *File
+	Sub         []*Command
+	Parent      *Command
 }
 
 func parseYaml(m map[string]interface{}) Command {
@@ -237,6 +238,12 @@ func modifyFile(file *File, folder *Folder, path string) {
 	file.RootPkgName = modName
 	file.PkgName = folder.Name
 	file.Cmd.FuncName = kebabToCamel(file.Cmd.Name)
+	for flag := range file.Cmd.Flags {
+		if file.Cmd.FlagsPretty == nil {
+			file.Cmd.FlagsPretty = make(map[string]string)
+		}
+		file.Cmd.FlagsPretty[flag] = kebabToCamel(flag)
+	}
 	file.Cmd.File = file
 }
 

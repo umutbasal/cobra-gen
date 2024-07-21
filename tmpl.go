@@ -40,21 +40,25 @@ var {{ if ne .Cmd.FuncName "Cmd"}}{{ .Cmd.FuncName }}{{ end }}Cmd = &cobra.Comma
 	},
 }
 
-{{if .Cmd.Flags}}
-var test{{ .Cmd.FuncName }} string
+
+{{$pkg := .PkgName}}
+{{$parent := .ParentPkg}}
+{{$cmd := .Cmd}}
+
+{{if $cmd.Flags}}
+{{ range $key, $flag := $cmd.Flags }}
+var {{ $cmd.FuncName }}{{index $cmd.FlagsPretty $key}} string
+{{ end }}
 {{ end }}
 
 func init() {
-	{{$pkg := .PkgName}}
-	{{$parent := .ParentPkg}}
-	{{$cmd := .Cmd}}
 	// Flags
 	{{ if .Cmd.Flags}}
 	{{ range $key, $flag := .Cmd.Flags }}
 	// {{ $key }} : {{ $flag }}
-	{{ if eq $pkg $parent }}{{ if $cmd }}{{ $cmd.FuncName }}Cmd.Flags().StringVarP(&test{{ $cmd.FuncName }}, "{{ $key }}", "", "", "desc"){{end}}
+	{{ if eq $pkg $parent }}{{ if $cmd }}{{ $cmd.FuncName }}Cmd.Flags().StringVarP(&{{ $cmd.FuncName }}{{index $cmd.FlagsPretty $key}}, "{{ $key }}", "", "", "desc"){{end}}
 	{{ else }}
-	{{ if $cmd }}{{ if ne $cmd.FuncName "Cmd"}}{{ $cmd.FuncName }}{{ end }}Cmd.PersistentFlags().StringVarP(&test{{ $cmd.FuncName }}, "{{ $key }}", "", "", "desc") {{end}}
+	{{ if $cmd }}{{ if ne $cmd.FuncName "Cmd"}}{{ $cmd.FuncName }}{{ end }}Cmd.PersistentFlags().StringVarP(&{{ $cmd.FuncName }}{{index $cmd.FlagsPretty $key}}, "{{ $key }}", "", "", "desc") {{end}}
 	{{end}}
 	{{ end }}
 	{{ end }}
