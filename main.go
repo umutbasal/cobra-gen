@@ -92,6 +92,8 @@ func main() {
 		return
 	}
 
+	formatCode()
+
 	c := loadConfig()
 	commands := parseYaml(c.Cmd)
 	// if cmd exists throw error
@@ -124,14 +126,38 @@ func createFilesAndDirectories(files []File) {
 }
 
 func formatCode() {
+
+	var r bool
+	// check if gofmt exists
+	if !commandExists("gofmt") {
+		fmt.Println("gofmt not found, install it")
+		r = true
+	}
+
+	// check if goimports exists
+	if !commandExists("goimports") {
+		fmt.Println("goimports not found, install it")
+		r = true
+	}
+	if r {
+		panic("")
+	}
+
 	runCommand("gofmt", "cmd")
+	//go install golang.org/x/tools/cmd/goimports@latest
 	runCommand("goimports", "cmd")
+}
+
+func commandExists(cmd string) bool {
+	_, err := exec.LookPath(cmd)
+	return err == nil
 }
 
 func runCommand(name, dir string) {
 	cmd := exec.Command(name, "-w", ".")
 	cmd.Dir = dir
 	if err := cmd.Run(); err != nil {
+		fmt.Printf("Error running %s please install it. (err: %v)\n", name, err)
 		panic(err)
 	}
 }
