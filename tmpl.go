@@ -73,10 +73,11 @@ func init() {
 }
 `
 
-var exampleTmpl = `package main
+func exampleTmpl(mod string) string {
+	return `package main
 
 import (
-	"github.com/umutbasal/cobra-gen/cmd"
+	"` + mod + `/cmd"
 )
 
 
@@ -84,6 +85,7 @@ func main(){
 	cmd.Cmd.Execute()
 }
 `
+}
 
 func execTmpl(f *File) []byte {
 	tmpl, err := template.New("main").Parse(rootTmpl)

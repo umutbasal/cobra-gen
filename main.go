@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -86,57 +87,60 @@ func parseMap(m map[interface{}]interface{}, parent *Command) {
 }
 
 func main() {
-
 	if len(os.Args) > 1 {
 		generate()
 		return
 	}
-	c := loadConfig()
 
+	c := loadConfig()
 	commands := parseYaml(c.Cmd)
-	folders := &Folder{
-		Name: "cmd",
+	// if cmd exists throw error
+	if _, err := os.Stat("cmd"); err == nil {
+		panic("cmd directory already exists")
 	}
+	folders := &Folder{Name: "cmd"}
+
 	structureFolders(commands, 0, folders)
 	var files []File
 	fillForTemplate(folders, ".", &files)
+
+	createFilesAndDirectories(files)
+	formatCode()
+	createExamplesMain()
+}
+
+func createFilesAndDirectories(files []File) {
 	for _, f := range files {
-		println(f.Path)
+		fmt.Println(f.Path)
 
-		err := os.MkdirAll(path.Dir(f.Path), 0755)
-		if err != nil {
+		if err := os.MkdirAll(path.Dir(f.Path), 0755); err != nil {
 			panic(err)
 		}
 
-		err = os.WriteFile(f.Path, execTmpl(&f), 0644)
-		if err != nil {
+		if err := os.WriteFile(f.Path, execTmpl(&f), 0644); err != nil {
 			panic(err)
 		}
 	}
-	//exec gofmt -w . in cmd
+}
 
-	cmd := exec.Command("gofmt", "-w", ".")
-	cmd.Dir = "cmd"
-	err := cmd.Run()
-	if err != nil {
+func formatCode() {
+	runCommand("gofmt", "cmd")
+	runCommand("goimports", "cmd")
+}
+
+func runCommand(name, dir string) {
+	cmd := exec.Command(name, "-w", ".")
+	cmd.Dir = dir
+	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
+}
 
-	// goimports -w .
-	cmd = exec.Command("goimports", "-w", ".")
-	cmd.Dir = "cmd"
-	err = cmd.Run()
-	if err != nil {
+func createExamplesMain() {
+	if err := os.MkdirAll("examples/cobra-gen", 0755); err != nil {
 		panic(err)
 	}
-
-	// create examples/main.go
-	err = os.MkdirAll("examples", 0755)
-	if err != nil {
-		panic(err)
-	}
-	err = os.WriteFile("examples/main.go", []byte(exampleTmpl), 0644)
-	if err != nil {
+	if err := os.WriteFile("examples/cobra-gen/main.go", []byte(exampleTmpl(modName)), 0644); err != nil {
 		panic(err)
 	}
 }
